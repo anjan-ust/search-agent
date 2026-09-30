@@ -1,0 +1,23 @@
+# Domains treated as India-verified regardless of currency.
+whitelist:
+  - myntra.com
+  - ajio.com
+  - nykaafashion.com
+  - amazon.in
+  - flipkart.com
+  - meesho.com
+  - tatacliq.com
+  - snapdeal.com
+  - limeroad.com
+
+# Domains dropped outright even if currency happens to read as INR.
+blacklist:
+  - amazon.com
+  - ebay.com
+  - aliexpress.com
+  - etsy.com
+
+# Reserved for a future Playwright fallback (not used in v1 - see README).
+needs_js:
+  - myntra.com
+  - ajio.com

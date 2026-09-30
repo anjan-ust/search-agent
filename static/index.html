@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dress Finder</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="blob blob-a"></div>
+  <div class="blob blob-b"></div>
+
+  <header class="hero">
+    <h1><span class="grad-text">Dress</span> Finder</h1>
+    <p>Upload a photo. We'll hunt it down across Indian retailers.</p>
+  </header>
+
+  <main class="container">
+    <section class="panel glass" id="upload-panel">
+      <form id="search-form">
+        <label class="dropzone" id="dropzone" for="image-input">
+          <img id="preview" class="preview hidden" alt="Preview" />
+          <div id="dropzone-placeholder" class="dropzone-placeholder">
+            <div class="dropzone-icon">📷</div>
+            <p><strong>Drop a dress photo</strong> or click to browse</p>
+            <span class="muted">JPG or PNG</span>
+          </div>
+        </label>
+        <input type="file" id="image-input" accept="image/*" hidden required />
+
+        <div class="field-row">
+          <div class="field">
+            <label for="size-input">Target size</label>
+            <input type="text" id="size-input" placeholder="e.g. M, L, 38" />
+          </div>
+          <div class="field">
+            <label for="pincode-input">Pincode</label>
+            <input type="text" id="pincode-input" placeholder="e.g. 400001" />
+          </div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="cta">
+          <span>Find this dress</span>
+        </button>
+      </form>
+    </section>
+
+    <section class="panel glass hidden" id="progress-panel">
+      <h2>Working on it...</h2>
+      <ul id="steps"></ul>
+    </section>
+
+    <section class="hidden" id="results-section">
+      <div class="results-header">
+        <h2>Results</h2>
+        <span id="results-count" class="muted"></span>
+      </div>
+      <div id="pincode-banner" class="banner hidden"></div>
+      <div id="warnings-banner" class="banner warn hidden"></div>
+      <div id="results-grid" class="results-grid"></div>
+    </section>
+
+    <div id="error-banner" class="banner error hidden"></div>
+  </main>
+
+  <footer>
+    <p>Pincode delivery is never checked automatically — verify it yourself for the candidates above.</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
