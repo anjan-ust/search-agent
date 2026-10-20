@@ -104,3 +104,123 @@ config/domains.yaml      India whitelist/blacklist, editable without code change
 - **Site-specific size parsing**: add a module in `adapters/` (e.g. `adapters/myntra.py`) exposing `check_size(html: str, target_size: str) -> str`, then call `adapters.register("myntra.com", check_size)` on import.
 - **Site-specific pincode checks**: for the 2-3 retailers you actually buy from, open devtools, watch the network tab when entering a pincode on the product page, and reverse-engineer that endpoint into a small per-site function. This won't generalize and isn't wired into the graph as an automated node on purpose — see the "v1 scope" note above.
 - **Domain whitelist/blacklist**: edit `config/domains.yaml` directly, no code changes needed.
+
+
+import argparse
+import asyncio
+import os
+
+from dotenv import load_dotenv
+from tabulate import tabulate
+
+load_dotenv()
+
+REQUIRED_ENV = ["SERPAPI_KEY", "GROQ_API_KEY", "IMGBB_API_KEY"]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Dress image search agent")
+    parser.add_argument(
+        "--image",
+        dest="images",
+        action="append",
+        required=True,
+        help="Path to a dress photo. Repeat for extra angles, e.g. --image front.jpg --image back.jpg",
+    )
+    parser.add_argument("--size", default=None, help="Target size, e.g. M, L, 38")
+    parser.add_argument(
+        "--pincode",
+        default=None,
+        help="Delivery pincode, shown as a reminder only - not checked automatically",
+    )
+    parser.add_argument(
+        "--skip-india-filter",
+        action="store_true",
+        help="Relax the India filter: keep non-whitelisted/non-INR results too (still drops known blacklisted domains)",
+    )
+    return parser.parse_args()
+
+
+def build_table(ranked_output) -> str:
+    rows = [
+        [
+            c.title[:50],
+            c.merchant or c.source_domain,
+            f"{c.price} {c.currency}" if c.price else "-",
+            c.match_type,
+            "+".join(c.origin),
+            "yes" if c.india_verified else "no",
+            c.size_status,
+            c.pincode_status,
+            f"{round(c.attribute_score * 100)}%",
+            round(c.score, 2),
+            c.link,
+        ]
+        for c in ranked_output
+    ]
+    headers = [
+        "Title",
+        "Merchant",
+        "Price",
+        "Match",
+        "Origin",
+        "India",
+        "Size",
+        "Pincode",
+        "Attrs",
+        "Score",
+        "Link",
+    ]
+    return tabulate(rows, headers=headers, tablefmt="grid")
+
+
+async def main() -> None:
+    args = parse_args()
+
+    missing = [name for name in REQUIRED_ENV if not os.environ.get(name)]
+    if missing:
+        raise SystemExit(
+            f"Missing required environment variables: {', '.join(missing)}. "
+            "Copy .env.example to .env and fill them in."
+        )
+
+    # Imported after the env check so a missing langgraph/dependency error
+    # doesn't mask a more actionable "you forgot to set up .env" message.
+    from graph import build_graph
+
+    app = build_graph()
+    initial_state = {
+        "image_paths": args.images,
+        "target_size": args.size,
+        "pincode": args.pincode,
+        "skip_india_filter": args.skip_india_filter,
+        "errors": [],
+    }
+    result = await app.ainvoke(initial_state)
+    ranked_output = result.get("ranked_output", [])
+
+    if not ranked_output:
+        print("No results survived the filters. Try re-running with:")
+        if args.size:
+            print("  --size omitted, to stop filtering on target size")
+        if not args.skip_india_filter:
+            print("  --skip-india-filter, to relax the India whitelist/currency check")
+    else:
+        print(build_table(ranked_output))
+
+    if args.pincode:
+        print(
+            f"\nPincode delivery is not checked automatically - verify "
+            f"delivery to {args.pincode} yourself for the candidates above."
+        )
+
+    errors = result.get("errors", [])
+    if errors:
+        print("\nWarnings during this run:")
+        for err in errors:
+            print(f"  - {err}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
